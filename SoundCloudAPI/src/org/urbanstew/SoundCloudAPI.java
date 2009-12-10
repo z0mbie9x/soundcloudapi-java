@@ -15,7 +15,7 @@
  * 
  */
 
-	package org.urbanstew;
+package org.urbanstew;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
@@ -82,7 +82,7 @@ public class SoundCloudAPI
      */
     public SoundCloudAPI(String consumerKey, String consumerSecret, SoundCloudOptions options)
 	{
-		this(consumerKey, consumerSecret, "", "");
+		this(consumerKey, consumerSecret, "", "", options);
 	}
 
     /**
