@@ -1,0 +1,6 @@
+# use glob syntax.
+syntax: glob
+
+doc
+bin
+.DS_Store
