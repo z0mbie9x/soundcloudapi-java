@@ -35,7 +35,8 @@ public class SoundCloudApiTest
 	public static String
 		sToken = null, sTokenSecret = null;
 	
-	// to avoid having to reauthorize, you can hard-code the token / token secret here:
+	// to avoid having to re-authorize, you can hard-code the token / token secret here:
+	// (this will also disable the AuthorizationTest)
 //		sToken = "...",
 //		sTokenSecret= "...";
 }

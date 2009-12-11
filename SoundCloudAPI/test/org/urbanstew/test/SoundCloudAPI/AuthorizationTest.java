@@ -79,8 +79,8 @@ public class AuthorizationTest extends TestCase
 		assertTrue(success);
 		assertEquals(mApi.getState(), SoundCloudAPI.State.AUTHORIZED);
 		
-		System.out.println("Token: " + mApi.getToken());
-		System.out.println("Token Secret: " + mApi.getTokenSecret());
+		System.out.println("sToken = \"" + mApi.getToken() + "\",");
+		System.out.println("sTokenSecret = \"" + mApi.getTokenSecret() + "\";");
 		SoundCloudApiTest.sToken = mApi.getToken();
 		SoundCloudApiTest.sTokenSecret = mApi.getTokenSecret();
 	}

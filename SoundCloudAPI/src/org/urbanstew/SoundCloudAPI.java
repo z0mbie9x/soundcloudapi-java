@@ -142,18 +142,29 @@ public class SoundCloudAPI
 	    		mSoundCloudURL + "oauth/authorize"
 	    	);
 	}
-
+	
     /**
      * Obtains the request token from Sound Cloud
      * @return authorization URL on success, null otherwise.
      */
 	public String obtainRequestToken()
 	{
+		return obtainRequestToken(null);
+	}
+
+    /**
+     * Obtains the request token from Sound Cloud, with a specified callback URL.
+     * @return authorization URL on success, null otherwise.
+     */
+	public String obtainRequestToken(String callbackURL)
+	{
 		mState = State.UNAUTHORIZED;
       
         try
 		{
-			String url = mProvider.retrieveRequestToken(OAuth.OUT_OF_BAND);
+        	if(callbackURL == null)
+        		callbackURL = OAuth.OUT_OF_BAND;
+			String url = mProvider.retrieveRequestToken(callbackURL);
 			mState = State.REQUEST_TOKEN_OBTAINED;
 			return url;
 		} catch (Exception e)
@@ -163,8 +174,8 @@ public class SoundCloudAPI
         
 		return null;
 	}
-
-    /**
+	
+	/**
      * Swaps the authorized request token for an access token.
      */
 	public boolean obtainAccessToken(String verificationCode)
@@ -260,17 +271,17 @@ public class SoundCloudAPI
 	{
 		HttpPost post = new HttpPost(urlEncode("tracks", null));  
 		 
-		MultipartEntity entity = new MultipartEntity();  
-		entity.addPart("track[asset_data]", fileBody);  
+		MultipartEntity entity = new MultipartEntity();
 		for(NameValuePair pair : params)
 		{
 			try
 			{
-				entity.addPart(pair.getName(), new StringBody(pair.getValue()));
+				entity.addPart(pair.getName(), new StringBodyNoHeaders(pair.getValue()));
 			} catch (UnsupportedEncodingException e)
 			{
 			}  
 		}
+		entity.addPart("track[asset_data]", fileBody);  
 
 		post.setEntity(entity);
 		return performRequest(post);  
@@ -288,7 +299,6 @@ public class SoundCloudAPI
 		}
 		
 		return null;
-
 	}
 	
 	private String urlEncode(String resource, List<NameValuePair> params)
@@ -341,4 +351,22 @@ public class SoundCloudAPI
     HttpClient httpClient = new DefaultHttpClient();
 
     private Exception mLastException;
+}
+
+class StringBodyNoHeaders extends StringBody
+{
+	public StringBodyNoHeaders(String value) throws UnsupportedEncodingException
+	{
+		super(value);
+	}	
+	
+	public String getMimeType()
+	{
+		return null;
+	}
+
+	public String getTransferEncoding()
+	{
+		return null;
+	}	
 }

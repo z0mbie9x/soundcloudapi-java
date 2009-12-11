@@ -64,7 +64,7 @@ public class RequestTest extends TestCase
 	{
 		HttpResponse response = mApi.get("me");
 		assertEquals(200, response.getStatusLine().getStatusCode());
-
+		
 		sUserId = getId(response);
 		assertTrue(sUserId > 0);
 		
@@ -97,7 +97,7 @@ public class RequestTest extends TestCase
 	}
 	
 	public final void testDeleteComment() throws Exception
-	{				
+	{
 		HttpResponse response = mApi.delete("comments/" + sCommentId);
 		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
@@ -109,22 +109,50 @@ public class RequestTest extends TestCase
 		
 		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
 		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
+		params.add(new BasicNameValuePair("track[sharing]", "private"));
 
 		HttpResponse response = mApi.upload(file, params);
-		assertEquals(201, response.getStatusLine().getStatusCode());		
+		assertEquals(201, response.getStatusLine().getStatusCode());
+		
+		sCreatedTrack1Id = getId(response);
 	}
-	
+
+	public final void testPutTrackFavorite() throws Exception
+	{
+		HttpResponse response = mApi.put("me/favorites/" + sCreatedTrack1Id);
+		assertEquals(201, response.getStatusLine().getStatusCode());
+	}
+
 	public final void testUploadFileFromByteArray() throws Exception
 	{
 		byte[] emptywav = {
-				0x52, 0x49, 0x46, 0x46, 0x24, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x44, (byte) 0xAC, 0x00, 0x00, (byte) 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00
+				0x52, 0x49, 0x46, 0x46, 0x7C, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66, 0x6D, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x44, (byte) 0xAC, 0x00, 0x00, (byte) 0x88, 0x58, 0x01, 0x00, 0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74, 0x61, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 			};
 		
 		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
 		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
+		params.add(new BasicNameValuePair("track[sharing]", "private"));
 
 		HttpResponse response = mApi.upload(new StringBody(new String(emptywav)), params);
 		assertEquals(201, response.getStatusLine().getStatusCode());		
+
+		sCreatedTrack2Id = getId(response);
+	}
+	
+	public final void testFile1Delete() throws Exception
+	{
+		assertTrue(sCreatedTrack1Id > 0);
+
+		HttpResponse response = mApi.delete("tracks/" + sCreatedTrack1Id);
+		assertEquals(200, response.getStatusLine().getStatusCode());		
+	}
+	
+	public final void testFile2Delete() throws Exception
+	{
+		assertTrue(sCreatedTrack2Id > 0);
+
+		HttpResponse response = mApi.delete("tracks/" + sCreatedTrack2Id);
+		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
 	
 	public static Test suite()
@@ -132,8 +160,11 @@ public class RequestTest extends TestCase
 		return new TestSuite(RequestTest.class);
 	}
 
-	private void printXML(String title, Document dom) throws Exception
+	private void printXML(String title, HttpResponse response) throws Exception
 	{
+		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		Document dom = db.parse(response.getEntity().getContent());
+
 		System.out.println(title + " response XML:");
 		StringWriter writer = new StringWriter();
 		StreamResult result = new StreamResult(writer);
@@ -151,5 +182,5 @@ public class RequestTest extends TestCase
 	
 	SoundCloudAPI mApi;
 	Transformer mTransformer;
-	static int sUserId = -1, sTrackId = -1, sCommentId = -1;
+	static int sUserId = -1, sTrackId = -1, sCommentId = -1, sCreatedTrack1Id = -1, sCreatedTrack2Id = -1;
 }
