@@ -15,10 +15,10 @@
  * 
  */
 
-package org.urbanstew;
+package org.urbanstew.soundcloudapi;
 
-import org.urbanstew.SoundCloudAPI.OAuthVersion;
-import org.urbanstew.SoundCloudAPI.SoundCloudSystem;
+import org.urbanstew.soundcloudapi.SoundCloudAPI.OAuthVersion;
+import org.urbanstew.soundcloudapi.SoundCloudAPI.SoundCloudSystem;
 
 public class SoundCloudOptions
 {

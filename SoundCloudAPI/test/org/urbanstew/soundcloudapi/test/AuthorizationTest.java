@@ -15,13 +15,13 @@
  * 
  */
 
-package org.urbanstew.test.SoundCloudAPI;
+package org.urbanstew.soundcloudapi.test;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-import org.urbanstew.SoundCloudAPI;
+import org.urbanstew.soundcloudapi.SoundCloudAPI;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

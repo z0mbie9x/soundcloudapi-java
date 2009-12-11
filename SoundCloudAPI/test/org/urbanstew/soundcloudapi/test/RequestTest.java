@@ -15,7 +15,7 @@
  * 
  */
 
-package org.urbanstew.test.SoundCloudAPI;
+package org.urbanstew.soundcloudapi.test;
 
 import java.io.File;
 import java.io.StringWriter;
@@ -32,7 +32,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.message.BasicNameValuePair;
-import org.urbanstew.SoundCloudAPI;
+import org.urbanstew.soundcloudapi.SoundCloudAPI;
 import org.w3c.dom.Document;
 
 import junit.framework.Test;

@@ -15,9 +15,9 @@
  * 
  */
 
-package org.urbanstew.test.SoundCloudAPI;
+package org.urbanstew.soundcloudapi.test;
 
-import org.urbanstew.SoundCloudAPI;
+import org.urbanstew.soundcloudapi.SoundCloudAPI;
 
 public class SoundCloudApiTest
 {

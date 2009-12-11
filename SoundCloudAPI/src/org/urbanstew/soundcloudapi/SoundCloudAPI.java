@@ -15,7 +15,7 @@
  * 
  */
 
-package org.urbanstew;
+package org.urbanstew.soundcloudapi;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
