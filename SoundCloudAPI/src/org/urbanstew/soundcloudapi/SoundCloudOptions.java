@@ -22,19 +22,26 @@ import org.urbanstew.soundcloudapi.SoundCloudAPI.SoundCloudSystem;
 
 public class SoundCloudOptions
 {
-	SoundCloudOptions()
+	public SoundCloudOptions()
 	{}
 	
 	public SoundCloudOptions(SoundCloudSystem system)
 	{
 		this.system = system;
 	}
-	public void setVersion(OAuthVersion newVersion)
-	{	version = newVersion; }
 	
-	public void setSystem(SoundCloudSystem newSystem)
-	{	system = newSystem; }
+	public SoundCloudOptions(SoundCloudSystem system, OAuthVersion version)
+	{
+		this.system = system;
+		this.version = version;
+	}
 	
+	public SoundCloudOptions with(OAuthVersion newVersion)
+	{	return new SoundCloudOptions(system, newVersion); }
+	
+	public SoundCloudOptions with(SoundCloudSystem newSystem)
+	{	return new SoundCloudOptions(newSystem, version); }
+
 	public OAuthVersion version = OAuthVersion.V1_0_A;
 	public SoundCloudSystem system = SoundCloudSystem.PRODUCTION;
 }

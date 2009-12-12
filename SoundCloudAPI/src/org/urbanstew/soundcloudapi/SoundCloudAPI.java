@@ -48,7 +48,7 @@ public class SoundCloudAPI
 {
 	public enum OAuthVersion
 	{
-//		V1_0,
+		V1_0,
 		V1_0_A
 	}
 	
@@ -59,6 +59,7 @@ public class SoundCloudAPI
 	}
 	
 	public static final SoundCloudOptions USE_SANDBOX = new SoundCloudOptions(SoundCloudSystem.SANDBOX);
+	public static final SoundCloudOptions USE_PRODUCTION = new SoundCloudOptions(SoundCloudSystem.PRODUCTION);
 	
     public enum State
     {
@@ -98,6 +99,7 @@ public class SoundCloudAPI
      */
     public SoundCloudAPI(String consumerKey, String consumerSecret, String token, String tokenSecret, SoundCloudOptions options)
 	{
+    	mOptions = options;
 		mConsumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret, SignatureMethod.HMAC_SHA1);
     	if(token.length()==0 || tokenSecret.length()==0)
     	{
@@ -113,12 +115,24 @@ public class SoundCloudAPI
 	
     /**
      * Constructor from another SoundCloudAPI.
-     * @throws Exception 
      */
-    public SoundCloudAPI(SoundCloudAPI soundCloudRequest) throws Exception
+    public SoundCloudAPI(SoundCloudAPI soundCloudAPI)
 	{
-    	// TODO implement SoundCloudAPI(SoundCloudAPI)
-    	throw new Exception("SoundCloudAPI(SoundCloudAPI) not implemented");
+        mState = soundCloudAPI.mState;
+        mOptions = soundCloudAPI.mOptions;
+        mConsumer = new CommonsHttpOAuthConsumer(soundCloudAPI.mConsumer.getConsumerKey(), soundCloudAPI.mConsumer.getConsumerSecret(), SignatureMethod.HMAC_SHA1);
+        if(mState == State.AUTHORIZED)
+        	mConsumer.setTokenWithSecret(soundCloudAPI.mConsumer.getToken(), soundCloudAPI.mConsumer.getTokenSecret());
+    	mSoundCloudURL = soundCloudAPI.mSoundCloudURL;
+    	mSoundCloudApiURL = soundCloudAPI.mSoundCloudApiURL;
+
+    	mProvider = new DefaultOAuthProvider
+	    	(
+	    		mConsumer,
+	    		mSoundCloudApiURL + "oauth/request_token",
+	    		mSoundCloudApiURL + "oauth/access_token",
+	    		mSoundCloudURL + "oauth/authorize"
+	    	);
 	}
 	
 	private void setUsingSandbox(boolean use)
@@ -162,7 +176,7 @@ public class SoundCloudAPI
       
         try
 		{
-        	if(callbackURL == null)
+        	if(callbackURL == null && mOptions.version == OAuthVersion.V1_0_A)
         		callbackURL = OAuth.OUT_OF_BAND;
 			String url = mProvider.retrieveRequestToken(callbackURL);
 			mState = State.REQUEST_TOKEN_OBTAINED;
@@ -348,9 +362,11 @@ public class SoundCloudAPI
     
 	String mSoundCloudURL, mSoundCloudApiURL;
 
+	SoundCloudOptions mOptions;
+	
     HttpClient httpClient = new DefaultHttpClient();
 
-    private Exception mLastException;
+    private Exception mLastException = null;
 }
 
 class StringBodyNoHeaders extends StringBody
