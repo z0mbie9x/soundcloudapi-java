@@ -79,7 +79,7 @@ public class SoundCloudAPI
     
     /**
      * Constructor for the case when neither the request or access token have
-     * been obtained, with non-default options.
+     * been obtained, with specified options.
      */
     public SoundCloudAPI(String consumerKey, String consumerSecret, SoundCloudOptions options)
 	{
@@ -95,7 +95,7 @@ public class SoundCloudAPI
 	}
     
     /**
-     * Constructor for the case when the access token has been obtained, with non-default options.
+     * Constructor for the case when the access token has been obtained, with specified options.
      */
     public SoundCloudAPI(String consumerKey, String consumerSecret, String token, String tokenSecret, SoundCloudOptions options)
 	{
