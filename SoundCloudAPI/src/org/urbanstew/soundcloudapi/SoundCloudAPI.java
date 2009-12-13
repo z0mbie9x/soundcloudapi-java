@@ -18,10 +18,12 @@
 package org.urbanstew.soundcloudapi;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.List;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -35,6 +37,10 @@ import oauth.signpost.OAuthConsumer;
 import oauth.signpost.OAuthProvider;
 import oauth.signpost.basic.DefaultOAuthProvider;
 import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
+import oauth.signpost.exception.OAuthNotAuthorizedException;
 import oauth.signpost.signature.SignatureMethod;
 
 import org.apache.http.client.utils.URLEncodedUtils;
@@ -160,8 +166,12 @@ public class SoundCloudAPI
     /**
      * Obtains the request token from Sound Cloud
      * @return authorization URL on success, null otherwise.
+     * @throws OAuthCommunicationException 
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthNotAuthorizedException 
+     * @throws OAuthMessageSignerException 
      */
-	public String obtainRequestToken()
+	public String obtainRequestToken() throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
 		return obtainRequestToken(null);
 	}
@@ -169,119 +179,151 @@ public class SoundCloudAPI
     /**
      * Obtains the request token from Sound Cloud, with a specified callback URL.
      * @return authorization URL on success, null otherwise.
+     * @throws OAuthCommunicationException 
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthNotAuthorizedException 
+     * @throws OAuthMessageSignerException 
      */
-	public String obtainRequestToken(String callbackURL)
+	public String obtainRequestToken(String callbackURL) throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
 		mState = State.UNAUTHORIZED;
       
-        try
-		{
-        	if(callbackURL == null && mOptions.version == OAuthVersion.V1_0_A)
-        		callbackURL = OAuth.OUT_OF_BAND;
-			String url = mProvider.retrieveRequestToken(callbackURL);
-			mState = State.REQUEST_TOKEN_OBTAINED;
-			return url;
-		} catch (Exception e)
-		{
-			mLastException = e;
-		}
-        
-		return null;
+    	if(callbackURL == null && mOptions.version == OAuthVersion.V1_0_A)
+    		callbackURL = OAuth.OUT_OF_BAND;
+		String url = mProvider.retrieveRequestToken(callbackURL);
+		mState = State.REQUEST_TOKEN_OBTAINED;
+		return url;
 	}
 	
 	/**
      * Swaps the authorized request token for an access token.
+	 * @throws OAuthCommunicationException 
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthNotAuthorizedException 
+	 * @throws OAuthMessageSignerException 
      */
-	public boolean obtainAccessToken(String verificationCode)
+	public void obtainAccessToken(String verificationCode) throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		try
-		{
-			mProvider.retrieveAccessToken(verificationCode);
-			mState = State.AUTHORIZED;
-			return true;
-		} catch (Exception e)
-		{
-			mLastException = e;
-		}
-		return false;
+		mProvider.retrieveAccessToken(verificationCode);
+		mState = State.AUTHORIZED;
 	}
 	
     /**
      * Performs a GET request on a specified resource.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse get(String resource)
+	public HttpResponse get(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return get(resource, null);
 	}
 
     /**
      * Performs a GET request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse get(String resource, List<NameValuePair> params)
+	public HttpResponse get(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return performRequest(new HttpGet(urlEncode(resource, params)));
 	}
 
     /**
      * Performs a PUT request on a specified resource.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse put(String resource)
+	public HttpResponse put(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return put(resource, null);
 	}
 
     /**
      * Performs a PUT request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse put(String resource, List<NameValuePair> params)
+	public HttpResponse put(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
         return performRequest(new HttpPut(urlEncode(resource, params)));   
 	}
 
     /**
      * Performs a POST request on a specified resource.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse post(String resource)
+	public HttpResponse post(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return post(resource, null);
 	}
 
     /**
      * Performs a POST request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse post(String resource, List<NameValuePair> params)
+	public HttpResponse post(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
         return performRequest(new HttpPost(urlEncode(resource, params)));   
 	}
 
     /**
      * Performs a DELETE request on a specified resource.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse delete(String resource)
+	public HttpResponse delete(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return delete(resource, null);
 	}
 
     /**
      * Performs a DELETE request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
      */
-	public HttpResponse delete(String resource, List<NameValuePair> params)
+	public HttpResponse delete(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
         return performRequest(new HttpDelete(urlEncode(resource, params)));   
 	}
 	
 	/**
      * Uploads a file by performing a POST request on the "tracks" resource.
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
      */
-	public HttpResponse upload(File file, List<NameValuePair> params)
+	public HttpResponse upload(File file, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		return upload(new FileBody(file), params);
 	}
 
 	/**
      * Uploads an arbitrary body by performing a POST request on the "tracks" resource.
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
      */
-	public HttpResponse upload(ContentBody fileBody, List<NameValuePair> params)
+	public HttpResponse upload(ContentBody fileBody, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
 		HttpPost post = new HttpPost(urlEncode("tracks", null));  
 		 
@@ -301,18 +343,17 @@ public class SoundCloudAPI
 		return performRequest(post);  
 	}
 	
-	private HttpResponse performRequest(HttpUriRequest request)
+	/**
+     * Signs and performs a request.
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+     */
+	private HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
 	{
-        try
-		{
-			mConsumer.sign(request);
-	        return httpClient.execute(request);
-		} catch (Exception e)
-		{
-			mLastException = e;
-		}
-		
-		return null;
+		mConsumer.sign(request);
+        return httpClient.execute(request);
 	}
 	
 	private String urlEncode(String resource, List<NameValuePair> params)
@@ -346,15 +387,7 @@ public class SoundCloudAPI
 	{
 		return mState;
 	}
-	
-    /**
-     * Returns the last exception thrown.
-     */
-	public Exception getLastException()
-	{
-		return mLastException;
-	}
-		    
+	 
     private State mState;
     
     OAuthConsumer mConsumer;
@@ -365,8 +398,6 @@ public class SoundCloudAPI
 	SoundCloudOptions mOptions;
 	
     HttpClient httpClient = new DefaultHttpClient();
-
-    private Exception mLastException = null;
 }
 
 class StringBodyNoHeaders extends StringBody

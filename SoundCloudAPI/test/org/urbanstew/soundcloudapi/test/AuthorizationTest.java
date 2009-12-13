@@ -18,7 +18,6 @@
 package org.urbanstew.soundcloudapi.test;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 
 import org.urbanstew.soundcloudapi.SoundCloudAPI;
@@ -48,7 +47,7 @@ public class AuthorizationTest extends TestCase
 		super.tearDown();
 	}
 
-	public final void testAuthorization() throws IOException
+	public final void testAuthorization() throws Exception
 	{
 		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
 			return;
@@ -71,12 +70,7 @@ public class AuthorizationTest extends TestCase
 			System.out.println("Verification code is: " + verificationCode);
 		}
 
-		boolean success = mApi.obtainAccessToken(verificationCode);
-		if(!success)
-		{
-			mApi.getLastException().printStackTrace();
-		}
-		assertTrue(success);
+		mApi.obtainAccessToken(verificationCode);
 		assertEquals(mApi.getState(), SoundCloudAPI.State.AUTHORIZED);
 		
 		System.out.println("sToken = \"" + mApi.getToken() + "\",");

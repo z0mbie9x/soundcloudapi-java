@@ -160,6 +160,7 @@ public class RequestTest extends TestCase
 		return new TestSuite(RequestTest.class);
 	}
 
+	@SuppressWarnings("unused")
 	private void printXML(String title, HttpResponse response) throws Exception
 	{
 		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
