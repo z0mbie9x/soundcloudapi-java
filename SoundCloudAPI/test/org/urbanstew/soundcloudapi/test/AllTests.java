@@ -28,6 +28,7 @@ public class AllTests
 		TestSuite suite = new TestSuite(
 				"Test for org.urbanstew.soundcloudapi.test");
 		//$JUnit-BEGIN$
+		suite.addTest(PublicTest.suite());
 		suite.addTest(AuthorizationTest.suite());
 		suite.addTest(RequestTest.suite());
 		//$JUnit-END$

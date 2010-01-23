@@ -18,15 +18,10 @@
 package org.urbanstew.soundcloudapi.test;
 
 import java.io.File;
-import java.io.StringWriter;
 import java.util.List;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -52,7 +47,6 @@ public class RequestTest extends TestCase
 		super.setUp();
 		
 		mApi = SoundCloudApiTest.newSoundCloudAPI();
-		mTransformer = TransformerFactory.newInstance().newTransformer();
 	}
 
 	protected void tearDown() throws Exception
@@ -73,6 +67,21 @@ public class RequestTest extends TestCase
 
 		response = mApi.get("users", params);
 		assertEquals(200, response.getStatusLine().getStatusCode());
+	}
+
+	public final void testUploadFile() throws Exception
+	{
+		File file = new File("empty.wav");
+		assertTrue(file.exists());
+		
+		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
+		params.add(new BasicNameValuePair("track[sharing]", "private"));
+
+		HttpResponse response = mApi.upload(file, params);
+		assertEquals(201, response.getStatusLine().getStatusCode());
+		
+		sCreatedTrack1Id = getId(response);
 	}
 
 	public final void testGetMyTracks() throws Exception
@@ -102,21 +111,6 @@ public class RequestTest extends TestCase
 		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
 	
-	public final void testUploadFile() throws Exception
-	{
-		File file = new File("empty.wav");
-		assertTrue(file.exists());
-		
-		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
-		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
-		params.add(new BasicNameValuePair("track[sharing]", "private"));
-
-		HttpResponse response = mApi.upload(file, params);
-		assertEquals(201, response.getStatusLine().getStatusCode());
-		
-		sCreatedTrack1Id = getId(response);
-	}
-
 	public final void testPutTrackFavorite() throws Exception
 	{
 		HttpResponse response = mApi.put("me/favorites/" + sCreatedTrack1Id);
@@ -160,18 +154,6 @@ public class RequestTest extends TestCase
 		return new TestSuite(RequestTest.class);
 	}
 
-	@SuppressWarnings("unused")
-	private void printXML(String title, HttpResponse response) throws Exception
-	{
-		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-		Document dom = db.parse(response.getEntity().getContent());
-
-		System.out.println(title + " response XML:");
-		StringWriter writer = new StringWriter();
-		StreamResult result = new StreamResult(writer);
-		mTransformer.transform(new DOMSource(dom), result);
-	    System.out.println(writer.toString());
-	}
 	
 	private int getId(HttpResponse response) throws Exception
 	{
@@ -182,6 +164,5 @@ public class RequestTest extends TestCase
 	}
 	
 	SoundCloudAPI mApi;
-	Transformer mTransformer;
 	static int sUserId = -1, sTrackId = -1, sCommentId = -1, sCreatedTrack1Id = -1, sCreatedTrack2Id = -1;
 }

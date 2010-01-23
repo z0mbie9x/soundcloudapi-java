@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import org.urbanstew.soundcloudapi.SoundCloudAPI;
+import org.urbanstew.soundcloudapi.AuthorizationURLOpener;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -47,16 +48,57 @@ public class AuthorizationTest extends TestCase
 		super.tearDown();
 	}
 
+	public final void testAutomaticAuthorization() throws Exception
+	{
+		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
+			return;
+
+		assertEquals(SoundCloudAPI.State.UNAUTHORIZED, mApi.getState());
+		
+		boolean result = mApi.authorizeUsingUrl
+		(
+			"http://127.0.0.1:8088/",
+			"Thank you for authorizing",
+			new AuthorizationURLOpener()
+			{
+				public void openAuthorizationURL(String authorizationURL)
+				{
+					mApi.cancelAuthorizeUsingUrl();
+				}
+			}
+		);
+		assertEquals(SoundCloudAPI.State.UNAUTHORIZED, mApi.getState());
+		assertEquals(false, result);
+
+		result = mApi.authorizeUsingUrl
+		(
+			"http://127.0.0.1:8088/",
+			"Thank you for authorizing",
+			new AuthorizationURLOpener()
+			{
+				public void openAuthorizationURL(String authorizationURL)
+				{
+					System.out.println(authorizationURL);
+				}
+			}
+		);
+		assertEquals(SoundCloudAPI.State.AUTHORIZED, mApi.getState());
+		assertEquals(true, result);
+		
+		System.out.println("sToken = \"" + mApi.getToken() + "\",");
+		System.out.println("sTokenSecret = \"" + mApi.getTokenSecret() + "\";");
+	}
+
 	public final void testAuthorization() throws Exception
 	{
 		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
 			return;
 
-		assertEquals(mApi.getState(), SoundCloudAPI.State.UNAUTHORIZED);
+		assertEquals(SoundCloudAPI.State.UNAUTHORIZED, mApi.getState());
 		
 		String authorizationUrl = mApi.obtainRequestToken();
 		assertNotNull(authorizationUrl);
-		assertEquals(mApi.getState(), SoundCloudAPI.State.REQUEST_TOKEN_OBTAINED);
+		assertEquals(SoundCloudAPI.State.REQUEST_TOKEN_OBTAINED, mApi.getState());
 		
 		String verificationCode = "";
 		if(authorizationUrl != null)
@@ -71,7 +113,7 @@ public class AuthorizationTest extends TestCase
 		}
 
 		mApi.obtainAccessToken(verificationCode);
-		assertEquals(mApi.getState(), SoundCloudAPI.State.AUTHORIZED);
+		assertEquals(SoundCloudAPI.State.AUTHORIZED, mApi.getState());
 		
 		System.out.println("sToken = \"" + mApi.getToken() + "\",");
 		System.out.println("sTokenSecret = \"" + mApi.getTokenSecret() + "\";");

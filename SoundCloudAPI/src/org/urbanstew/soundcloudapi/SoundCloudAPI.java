@@ -17,9 +17,15 @@
 
 package org.urbanstew.soundcloudapi;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.URL;
 import java.util.List;
 
 import org.apache.http.HttpResponse;
@@ -163,6 +169,12 @@ public class SoundCloudAPI
 	    	);
 	}
 	
+	public void unauthorize()
+	{
+		mConsumer.setTokenWithSecret("", "");
+		mState = State.UNAUTHORIZED;
+	}
+	
     /**
      * Obtains the request token from Sound Cloud
      * @return authorization URL on success, null otherwise.
@@ -186,13 +198,133 @@ public class SoundCloudAPI
      */
 	public String obtainRequestToken(String callbackURL) throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		mState = State.UNAUTHORIZED;
+		unauthorize();
       
     	if(callbackURL == null && mOptions.version == OAuthVersion.V1_0_A)
     		callbackURL = OAuth.OUT_OF_BAND;
 		String url = mProvider.retrieveRequestToken(callbackURL);
 		mState = State.REQUEST_TOKEN_OBTAINED;
 		return url;
+	}
+	
+    /**
+     * Completes the OAuth 1.0a authorization steps with Sound Cloud, assuming the consumer application
+     * can use a local port to receive the verification code.
+     * 
+     * <p>The function acts as a minimal HTTP server and will listen on the port specified in the
+     * <code>url</code> (or the default HTTP port, if no port is specified in the <code>url</code>).  It will provide the
+     * specified <code>response</code> when it receives a request for the path specified in the <code>url</code>, and
+     * assuming the request includes the verification code, terminate successfully.
+     * To all other requests it will respond with a <code>Not Found</code> error, and continue listening.
+     * 
+     * <p>The following example assumes the consumer application is running on the client's computer / device.
+     * Hence, it uses a local URL ("http://localhost/") to receive the verification code callback. The function
+     * will listen on specified port 8088 to receive the callback.</p>
+     * 
+     * <pre>
+     * {@code
+     *  soundcloudapi.authorizeUsingUrl
+	 *	(
+	 *		"http://localhost:8088/",
+	 *		"Thank you for authorizing",
+	 *		new AuthorizationURLOpener()
+	 *		{
+	 *			public void openAuthorizationURL(String authorizationURL)
+	 *			{
+	 *				System.out.println("Please visit " + authorizationURL);
+	 *			}
+	 *		}
+	 *	);
+	 * }
+	 * </pre>
+	 * 
+     * @param url - a callback URL via which the user can provide the verification code.
+     * @param response - a response given back to the user when they allow access and get redirected to the callback URL.
+     * @param URLOpener - an AuthorizationURLOpener which can open the authorization URL to the user when needed.
+	 *
+     * @return true if the process is completed successfully, false if the process was canceled via <code>cancelAuthorizeUsingUrl</code>.  
+     *  
+     * @throws OAuthCommunicationException 
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthNotAuthorizedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+
+     * @since 0.9.1
+     * @see #cancelAuthorizeUsingUrl()
+	*/
+	public boolean authorizeUsingUrl(final String url, final String response, final AuthorizationURLOpener URLOpener) throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException, IOException
+	{
+		mCancelAuthorization = false;
+		unauthorize();
+
+		URLOpener.openAuthorizationURL(obtainRequestToken(url));
+
+		URL parsedUrl = new URL(url);
+		int port = parsedUrl.getPort();
+		if(port == -1)
+			port = parsedUrl.getDefaultPort();
+
+		ServerSocket server = new ServerSocket(port);
+		server.setSoTimeout(500);
+		String verificationCode=null;
+		while(verificationCode==null)
+		{
+			Socket socket = null;
+			try
+			{
+				socket = server.accept();
+			} catch (java.io.InterruptedIOException e)
+			{
+				if(mCancelAuthorization)
+				{
+					server.close();
+					unauthorize();
+					return false;
+				}
+				else continue;
+			}
+			BufferedReader is = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+	
+			String requestedUrl = is.readLine().split("\\s+")[1];
+			
+			URL parsedRequestedUrl = new URL("http://localhost" + requestedUrl);
+	        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+
+	        if(!parsedRequestedUrl.getPath().equals(parsedUrl.getPath()))
+			{
+	        	out.print("HTTP/1.1 404 Not Found");
+			}
+	        else
+	        {
+		        out.print("HTTP/1.1 200 OK\n\n" + response);
+		        for(String parameter : parsedRequestedUrl.getQuery().split("&"))
+		        {
+		        	String[] keyValue = parameter.split("=");
+		        	if(keyValue[0].equals("oauth_verifier"))
+		        		verificationCode=keyValue[1];
+		        }
+	        }
+	        out.close();
+	        socket.close();
+		}
+        server.close();
+        
+        obtainAccessToken(verificationCode);
+        return true;
+	}
+	
+	/**
+     * If a call to authorizeUsingUrl is currently executing, it will be canceled and return
+     * shortly after cancelAuthorizeUsingUrl is called.  If there is no active authorizeUsingUrl
+     * call, there is no effect.
+     * 
+     * @see #authorizeUsingUrl(String, String, AuthorizationURLOpener)
+     * @since 0.9.1
+     */
+	public void cancelAuthorizeUsingUrl()
+	{
+		mCancelAuthorization = true;
 	}
 	
 	/**
@@ -392,6 +524,7 @@ public class SoundCloudAPI
     
     OAuthConsumer mConsumer;
     OAuthProvider mProvider;
+    volatile boolean mCancelAuthorization;
     
 	String mSoundCloudURL, mSoundCloudApiURL;
 
