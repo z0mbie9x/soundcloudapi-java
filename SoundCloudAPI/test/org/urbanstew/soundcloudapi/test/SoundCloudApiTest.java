@@ -42,8 +42,6 @@ public class SoundCloudApiTest
 			api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", sToken, sTokenSecret, SoundCloudAPI.USE_SANDBOX);
 		return api;
 	}
-	public static String
-		sToken = null, sTokenSecret = null;
 	
 	public static void printXML(String title, HttpResponse response) throws Exception
 	{
@@ -56,6 +54,10 @@ public class SoundCloudApiTest
 		TransformerFactory.newInstance().newTransformer().transform(new DOMSource(dom), result);
 	    System.out.println(writer.toString());
 	}
+
+	public static String
+		sToken = null, sTokenSecret = null;
+
 	// to avoid having to re-authorize, you can hard-code the token / token secret here:
 	// (this will also disable the AuthorizationTest)
 //		sToken = "...",

@@ -18,6 +18,7 @@
 package org.urbanstew.soundcloudapi;
 
 import java.io.BufferedReader;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -208,7 +209,7 @@ public class SoundCloudAPI
 	}
 	
     /**
-     * Completes the OAuth 1.0a authorization steps with Sound Cloud, assuming the consumer application
+     * Completes the OAuth 1.0a authorization steps with SoundCloud, assuming the consumer application
      * can use a local port to receive the verification code.
      * 
      * <p>The function acts as a minimal HTTP server and will listen on the port specified in the
@@ -218,7 +219,7 @@ public class SoundCloudAPI
      * To all other requests it will respond with a <code>Not Found</code> error, and continue listening.
      * 
      * <p>The following example assumes the consumer application is running on the client's computer / device.
-     * Hence, it uses a local URL ("http://localhost/") to receive the verification code callback. The function
+     * Hence, it uses a local URL ("http://localhost:8088/") to receive the verification code callback. The function
      * will listen on specified port 8088 to receive the callback.</p>
      * 
      * <pre>
@@ -265,50 +266,67 @@ public class SoundCloudAPI
 		if(port == -1)
 			port = parsedUrl.getDefaultPort();
 
-		ServerSocket server = new ServerSocket(port);
-		server.setSoTimeout(500);
+		ServerSocket server = null;
 		String verificationCode=null;
-		while(verificationCode==null)
+		
+		try
 		{
-			Socket socket = null;
-			try
-			{
-				socket = server.accept();
-			} catch (java.io.InterruptedIOException e)
-			{
-				if(mCancelAuthorization)
-				{
-					server.close();
-					unauthorize();
-					return false;
-				}
-				else continue;
-			}
-			BufferedReader is = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-	
-			String requestedUrl = is.readLine().split("\\s+")[1];
-			
-			URL parsedRequestedUrl = new URL("http://localhost" + requestedUrl);
-	        PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+			server = new ServerSocket(port);
+			server.setSoTimeout(500);
 
-	        if(!parsedRequestedUrl.getPath().equals(parsedUrl.getPath()))
+			while(verificationCode==null)
 			{
-	        	out.print("HTTP/1.1 404 Not Found");
+				Socket socket = null;
+				BufferedReader in = null;
+				PrintWriter out = null;
+				
+				try
+				{
+					try
+					{
+						socket = server.accept();
+					} catch (java.io.InterruptedIOException e)
+					{
+						if(mCancelAuthorization)
+						{
+							unauthorize();
+							return false;
+						}
+						else continue;
+					}
+					in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		
+					String requestedUrl = in.readLine().split("\\s+")[1];
+				
+					URL parsedRequestedUrl = new URL("http://localhost" + requestedUrl);
+					out = new PrintWriter(socket.getOutputStream(), true);
+	
+					if(!parsedRequestedUrl.getPath().equals(parsedUrl.getPath()))
+						out.print("HTTP/1.1 404 Not Found");
+					else
+					{
+						out.print("HTTP/1.1 200 OK\n\n" + response);
+						for(String parameter : parsedRequestedUrl.getQuery().split("&"))
+						{
+							String[] keyValue = parameter.split("=");
+							if(keyValue[0].equals("oauth_verifier"))
+								verificationCode=keyValue[1];
+						}
+					}
+					out.flush();
+				}
+				finally
+				{
+					closeQuietly(in);
+					closeQuietly(out);
+					closeQuietly(socket);					
+				}
 			}
-	        else
-	        {
-		        out.print("HTTP/1.1 200 OK\n\n" + response);
-		        for(String parameter : parsedRequestedUrl.getQuery().split("&"))
-		        {
-		        	String[] keyValue = parameter.split("=");
-		        	if(keyValue[0].equals("oauth_verifier"))
-		        		verificationCode=keyValue[1];
-		        }
-	        }
-	        out.close();
-	        socket.close();
 		}
-        server.close();
+		finally
+		{
+			closeQuietly(server);
+		}
         
         obtainAccessToken(verificationCode);
         return true;
@@ -496,6 +514,45 @@ public class SoundCloudAPI
 			resourceUrl + "?" + URLEncodedUtils.format(params, "UTF-8");
 	}
 	
+	private void closeQuietly(Closeable closeable)
+	{
+		try
+		{
+			if(closeable != null)
+				closeable.close();
+		}
+		catch(Exception e)
+		{
+			System.err.println("Exception during Closeable close: " + e);
+		}
+	}
+	
+	private void closeQuietly(Socket socket)
+	{
+		try
+		{
+			if(socket != null)
+				socket.close();
+		}
+		catch(Exception e)
+		{
+			System.err.println("Exception during Socket close: " + e);
+		}
+	}
+	
+	private void closeQuietly(ServerSocket server)
+	{
+		try
+		{
+			if(server != null)
+				server.close();
+		}
+		catch(Exception e)
+		{
+			System.err.println("Exception during SocketServer close: " + e);
+		}
+	}
+	
     /**
      * Returns the Request or Access Token.
      */
@@ -519,7 +576,7 @@ public class SoundCloudAPI
 	{
 		return mState;
 	}
-	 
+	
     private State mState;
     
     OAuthConsumer mConsumer;

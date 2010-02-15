@@ -27,6 +27,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.message.BasicNameValuePair;
+import org.urbanstew.soundcloudapi.ProgressFileBody;
 import org.urbanstew.soundcloudapi.SoundCloudAPI;
 import org.w3c.dom.Document;
 
@@ -133,7 +134,41 @@ public class RequestTest extends TestCase
 		sCreatedTrack2Id = getId(response);
 	}
 	
-	public final void testFile1Delete() throws Exception
+	public final void testUploadCountedFile() throws Exception
+	{
+		File file = new File("empty.wav");
+		assertTrue(file.exists());
+		
+		final List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
+		params.add(new BasicNameValuePair("track[sharing]", "private"));
+
+		final ProgressFileBody fileBody = new ProgressFileBody(file);
+		
+		Thread progressThread = new Thread(new Runnable()
+		{
+			public void run()
+			{
+				try
+				{
+					HttpResponse response = mApi.upload(fileBody, params);
+					assertEquals(201, response.getStatusLine().getStatusCode());
+					sCreatedTrack3Id = getId(response);
+				} catch (Exception e)
+				{
+					e.printStackTrace();
+				}
+			}
+		});
+		
+		progressThread.start();
+		while(progressThread.isAlive())
+			System.out.println(fileBody.getBytesTransferred());
+
+		assertEquals(132, fileBody.getBytesTransferred());
+	}
+	
+/*	public final void testFile1Delete() throws Exception
 	{
 		assertTrue(sCreatedTrack1Id > 0);
 
@@ -148,6 +183,14 @@ public class RequestTest extends TestCase
 		HttpResponse response = mApi.delete("tracks/" + sCreatedTrack2Id);
 		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
+
+	public final void testFile3Delete() throws Exception
+	{
+		assertTrue(sCreatedTrack2Id > 0);
+
+		HttpResponse response = mApi.delete("tracks/" + sCreatedTrack3Id);
+		assertEquals(200, response.getStatusLine().getStatusCode());		
+	}*/
 	
 	public static Test suite()
 	{
@@ -164,5 +207,5 @@ public class RequestTest extends TestCase
 	}
 	
 	SoundCloudAPI mApi;
-	static int sUserId = -1, sTrackId = -1, sCommentId = -1, sCreatedTrack1Id = -1, sCreatedTrack2Id = -1;
+	static int sUserId = -1, sTrackId = -1, sCommentId = -1, sCreatedTrack1Id = -1, sCreatedTrack2Id = -1, sCreatedTrack3Id = -1;
 }
