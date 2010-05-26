@@ -1,7 +1,6 @@
 package org.urbanstew.soundcloudapi;
 
 import java.io.File;
-import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -52,30 +51,13 @@ public class ProgressFileBody extends FileBody
 
     public void writeTo(final OutputStream out) throws IOException 
     { 
-    	super.writeTo(new CountingOutputStream(out));
+    	super.writeTo(mStream = new CountingOutputStream(out));
     } 
 
-    
     public long getBytesTransferred()
     {
-    	return mTransferred;
-    }
-    volatile long mTransferred = 0; 
-
-    public class CountingOutputStream extends FilterOutputStream 
-    {
-        
-        public CountingOutputStream(final OutputStream out)
-        { 
-            super(out); 
-        } 
-
-        public void write(int b) throws IOException
-        { 
-            super.write(b); 
-            ProgressFileBody.this.mTransferred++; 
-        } 
+    	return mStream == null ? 0 : mStream.getCount();
     }
     
-    
+    CountingOutputStream mStream = null;
 }

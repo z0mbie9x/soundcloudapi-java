@@ -57,15 +57,16 @@ public class FullExample extends TestCase
 		String verificationCode = in.readLine();
 		
 		// swap the request token for the access token
-		api.obtainAccessToken(verificationCode);
+		//api.obtainAccessToken(verificationCode);
 		
 		// save the access token and secret for future use
 		mAccessToken = api.getToken();
 		mAccessTokenSecret = api.getTokenSecret();
 		
 		// send a request
-		HttpResponse response = api.get("me");
+		HttpResponse response = api.put("me/favorites/996704");
 		System.out.println("Response from testFullExample:" + response.getStatusLine().toString());
+		SoundCloudApiTest.printXML("", response);
 	}
 
 	public final void testReAuthorizationExample() throws Exception
@@ -78,8 +79,9 @@ public class FullExample extends TestCase
 		SoundCloudAPI api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", mAccessToken, mAccessTokenSecret, SoundCloudAPI.USE_SANDBOX);
 		
 		// send a request
-		HttpResponse response = api.get("me");
+		HttpResponse response = api.put("me/favorites/996705");
 		System.out.println("Response from testReAuthorizationExample:" + response.getStatusLine().toString());
+		SoundCloudApiTest.printXML("", response);
 	}
 	
 	public static Test suite()

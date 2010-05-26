@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.List;
 
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -38,6 +39,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 
 import oauth.signpost.OAuth;
 import oauth.signpost.OAuthConsumer;
@@ -48,7 +50,7 @@ import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
 import oauth.signpost.exception.OAuthNotAuthorizedException;
-import oauth.signpost.signature.SignatureMethod;
+import oauth.signpost.signature.HmacSha1MessageSigner;
 
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.entity.mime.MultipartEntity;
@@ -112,8 +114,11 @@ public class SoundCloudAPI
      */
     public SoundCloudAPI(String consumerKey, String consumerSecret, String token, String tokenSecret, SoundCloudOptions options)
 	{
+    	initialize();
+    	
     	mOptions = options;
-		mConsumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret, SignatureMethod.HMAC_SHA1);
+		mConsumer.set(new CommonsHttpOAuthConsumer(consumerKey, consumerSecret));
+		getConsumer().setMessageSigner(new HmacSha1MessageSigner());
     	if(token.length()==0 || tokenSecret.length()==0)
     	{
     		mState = State.UNAUTHORIZED;
@@ -121,7 +126,7 @@ public class SoundCloudAPI
     	else
     	{
     		mState = State.AUTHORIZED;
-    		mConsumer.setTokenWithSecret(token, tokenSecret);
+    		getConsumer().setTokenWithSecret(token, tokenSecret);
     	}
 		setUsingSandbox(options.system == SoundCloudSystem.SANDBOX);
 	}
@@ -131,22 +136,36 @@ public class SoundCloudAPI
      */
     public SoundCloudAPI(SoundCloudAPI soundCloudAPI)
 	{
+    	initialize();
+    	
         mState = soundCloudAPI.mState;
         mOptions = soundCloudAPI.mOptions;
-        mConsumer = new CommonsHttpOAuthConsumer(soundCloudAPI.mConsumer.getConsumerKey(), soundCloudAPI.mConsumer.getConsumerSecret(), SignatureMethod.HMAC_SHA1);
+        mConsumer.set(new CommonsHttpOAuthConsumer(soundCloudAPI.getConsumer().getConsumerKey(), soundCloudAPI.getConsumer().getConsumerSecret()));
+        getConsumer().setMessageSigner(new HmacSha1MessageSigner());
+        
         if(mState == State.AUTHORIZED)
-        	mConsumer.setTokenWithSecret(soundCloudAPI.mConsumer.getToken(), soundCloudAPI.mConsumer.getTokenSecret());
+        	getConsumer().setTokenWithSecret(soundCloudAPI.getConsumer().getToken(), soundCloudAPI.getConsumer().getTokenSecret());
     	mSoundCloudURL = soundCloudAPI.mSoundCloudURL;
     	mSoundCloudApiURL = soundCloudAPI.mSoundCloudApiURL;
 
     	mProvider = new DefaultOAuthProvider
 	    	(
-	    		mConsumer,
 	    		mSoundCloudApiURL + "oauth/request_token",
 	    		mSoundCloudApiURL + "oauth/access_token",
 	    		mSoundCloudURL + "oauth/authorize"
 	    	);
 	}
+    
+    private void initialize()
+    {    	
+    	HttpClient client = new DefaultHttpClient();
+    	
+        httpClient = new DefaultHttpClient
+        	(
+        		new ThreadSafeClientConnManager(client.getParams(), client.getConnectionManager().getSchemeRegistry()),
+        		client.getParams()
+        	);
+    }
 	
 	private void setUsingSandbox(boolean use)
 	{
@@ -163,7 +182,6 @@ public class SoundCloudAPI
 		
 	    mProvider = new DefaultOAuthProvider
 	    	(
-	    		mConsumer,
 	    		mSoundCloudApiURL + "oauth/request_token",
 	    		mSoundCloudApiURL + "oauth/access_token",
 	    		mSoundCloudURL + "oauth/authorize"
@@ -172,7 +190,7 @@ public class SoundCloudAPI
 	
 	public void unauthorize()
 	{
-		mConsumer.setTokenWithSecret("", "");
+		getConsumer().setTokenWithSecret("", "");
 		mState = State.UNAUTHORIZED;
 	}
 	
@@ -203,7 +221,7 @@ public class SoundCloudAPI
       
     	if(callbackURL == null && mOptions.version == OAuthVersion.V1_0_A)
     		callbackURL = OAuth.OUT_OF_BAND;
-		String url = mProvider.retrieveRequestToken(callbackURL);
+		String url = mProvider.retrieveRequestToken(getConsumer(), callbackURL);
 		mState = State.REQUEST_TOKEN_OBTAINED;
 		return url;
 	}
@@ -312,6 +330,9 @@ public class SoundCloudAPI
 							if(keyValue[0].equals("oauth_verifier"))
 								verificationCode=keyValue[1];
 						}
+						if(verificationCode==null)
+							// problem - why didn't we get a verification code?
+							verificationCode="";
 					}
 					out.flush();
 				}
@@ -328,8 +349,13 @@ public class SoundCloudAPI
 			closeQuietly(server);
 		}
         
-        obtainAccessToken(verificationCode);
-        return true;
+        if(verificationCode.length()>0)
+        {
+        	obtainAccessToken(verificationCode);
+        	return true;
+        }
+        else
+        	return false;
 	}
 	
 	/**
@@ -354,7 +380,7 @@ public class SoundCloudAPI
      */
 	public void obtainAccessToken(String verificationCode) throws OAuthMessageSignerException, OAuthNotAuthorizedException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		mProvider.retrieveAccessToken(verificationCode);
+		mProvider.retrieveAccessToken(getConsumer(), verificationCode);
 		mState = State.AUTHORIZED;
 	}
 	
@@ -364,8 +390,9 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse get(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse get(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		return get(resource, null);
 	}
@@ -376,20 +403,33 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse get(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse get(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		return performRequest(new HttpGet(urlEncode(resource, params)));
 	}
 
+    /**
+     * Prepares a GET request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpUriRequest getRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
+	{
+		return signRequest(new HttpGet(urlEncode(resource, params)));
+	}
+	
     /**
      * Performs a PUT request on a specified resource.
      * @throws OAuthExpectationFailedException 
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse put(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse put(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		return put(resource, null);
 	}
@@ -400,22 +440,35 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse put(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse put(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
         return performRequest(new HttpPut(urlEncode(resource, params)));   
 	}
 
+    /**
+     * Prepares a PUT request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpUriRequest putRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
+	{
+		return signRequest(new HttpPut(urlEncode(resource, params)));
+	}
+	
     /**
      * Performs a POST request on a specified resource.
      * @throws OAuthExpectationFailedException 
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse post(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse post(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-		return post(resource, null);
+		return post(resource, (List<NameValuePair>) null);
 	}
 
     /**
@@ -424,10 +477,52 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse post(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse post(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-        return performRequest(new HttpPost(urlEncode(resource, params)));   
+        return httpClient.execute(postRequest(resource, params));
+	}
+
+    /**
+     * Performs a POST request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpResponse post(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
+	{
+        return httpClient.execute(postRequest(resource, entity));
+	}
+	
+    /**
+     * Prepares a POST request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     * @throws UnsupportedEncodingException 
+     */
+	public HttpUriRequest postRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, UnsupportedEncodingException
+	{
+		return signRequest(new HttpPost(urlEncode(resource, params)));
+	}
+	
+    /**
+     * Prepares a POST request on a specified resource, with an entity.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     * @throws UnsupportedEncodingException 
+     */
+	public HttpUriRequest postRequest(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, UnsupportedEncodingException
+	{
+		HttpPost post = new HttpPost(urlEncode(resource, null));
+		
+		post.setEntity(entity);
+				
+		return signRequest(post);
 	}
 
     /**
@@ -436,8 +531,9 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse delete(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse delete(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		return delete(resource, null);
 	}
@@ -448,10 +544,22 @@ public class SoundCloudAPI
      * @throws OAuthMessageSignerException 
      * @throws IOException 
      * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
      */
-	public HttpResponse delete(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse delete(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
         return performRequest(new HttpDelete(urlEncode(resource, params)));   
+	}
+	
+    /**
+     * Prepares a DELETE request on a specified resource, with parameters.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpUriRequest deleteRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
+	{
+		return signRequest(new HttpDelete(urlEncode(resource, params)));
 	}
 	
 	/**
@@ -460,8 +568,9 @@ public class SoundCloudAPI
 	 * @throws OAuthMessageSignerException 
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
+	 * @throws OAuthCommunicationException 
      */
-	public HttpResponse upload(File file, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse upload(File file, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		return upload(new FileBody(file), params);
 	}
@@ -472,8 +581,9 @@ public class SoundCloudAPI
 	 * @throws OAuthMessageSignerException 
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
+	 * @throws OAuthCommunicationException 
      */
-	public HttpResponse upload(ContentBody fileBody, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	public HttpResponse upload(ContentBody fileBody, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		HttpPost post = new HttpPost(urlEncode("tracks", null));  
 		 
@@ -493,22 +603,49 @@ public class SoundCloudAPI
 		return performRequest(post);  
 	}
 	
+	public String signStreamUrl(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
+	{
+		return getConsumer().sign(resource);
+	}
+
+	public HttpResponse getStream(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
+	{
+		return httpClient.execute(new HttpGet(signStreamUrl(resource)));
+	}
+	
 	/**
-     * Signs and performs a request.
+     * Prepares and signs a request.
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws OAuthCommunicationException 
+     */
+	private HttpUriRequest signRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException 
+	{
+		getConsumer().sign(request);
+		return request;
+	}
+	
+	/**
+     * Signs and executes a request.
 	 * @throws OAuthExpectationFailedException 
 	 * @throws OAuthMessageSignerException 
 	 * @throws IOException 
 	 * @throws ClientProtocolException 
+	 * @throws OAuthCommunicationException 
      */
-	private HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException
+	private HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-		mConsumer.sign(request);
+		getConsumer().sign(request);
         return httpClient.execute(request);
 	}
 	
 	private String urlEncode(String resource, List<NameValuePair> params)
 	{
-		String resourceUrl = mSoundCloudApiURL + resource;
+		String resourceUrl;
+			if(resource.startsWith("/"))
+				resourceUrl = mSoundCloudApiURL + resource.substring(1);
+			else
+				resourceUrl = resource.contains("://") ? resource : mSoundCloudApiURL + resource;
 		return params == null ?
 			resourceUrl :
 			resourceUrl + "?" + URLEncodedUtils.format(params, "UTF-8");
@@ -558,7 +695,7 @@ public class SoundCloudAPI
      */
     public String getToken()
 	{
-		return mConsumer.getToken();
+		return getConsumer().getToken();
 	}
 
     /**
@@ -566,7 +703,7 @@ public class SoundCloudAPI
      */
 	public String getTokenSecret()
 	{
-		return mConsumer.getTokenSecret();
+		return getConsumer().getTokenSecret();
 	}
 	
     /**
@@ -577,9 +714,14 @@ public class SoundCloudAPI
 		return mState;
 	}
 	
+	protected OAuthConsumer getConsumer()
+	{
+		return mConsumer.get();
+	}
+	
     private State mState;
     
-    OAuthConsumer mConsumer;
+    InheritableOAuthConsumer mConsumer = new InheritableOAuthConsumer();
     OAuthProvider mProvider;
     volatile boolean mCancelAuthorization;
     
@@ -587,8 +729,25 @@ public class SoundCloudAPI
 
 	SoundCloudOptions mOptions;
 	
-    HttpClient httpClient = new DefaultHttpClient();
+    HttpClient httpClient;
+    
+    class InheritableOAuthConsumer extends InheritableThreadLocal<OAuthConsumer>
+    {
+    	protected OAuthConsumer childValue(OAuthConsumer parentValue)
+    	{
+            if(mState != State.AUTHORIZED)
+            	return parentValue;
+            
+    		OAuthConsumer consumer = new CommonsHttpOAuthConsumer(parentValue.getConsumerKey(), parentValue.getConsumerSecret());
+    		consumer.setMessageSigner(new HmacSha1MessageSigner());
+    		consumer.setTokenWithSecret(parentValue.getToken(), parentValue.getTokenSecret());
+    		
+    		return consumer;
+    	}
+    }
 }
+
+
 
 class StringBodyNoHeaders extends StringBody
 {

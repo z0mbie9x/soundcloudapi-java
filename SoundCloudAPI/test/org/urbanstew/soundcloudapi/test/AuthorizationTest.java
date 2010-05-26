@@ -57,7 +57,7 @@ public class AuthorizationTest extends TestCase
 		
 		boolean result = mApi.authorizeUsingUrl
 		(
-			"http://127.0.0.1:8088/",
+			"http://127.0.0.1:8091/",
 			"Thank you for authorizing",
 			new AuthorizationURLOpener()
 			{
@@ -72,7 +72,7 @@ public class AuthorizationTest extends TestCase
 
 		result = mApi.authorizeUsingUrl
 		(
-			"http://127.0.0.1:8088/",
+			"http://127.0.0.1:8091/",
 			"Thank you for authorizing",
 			new AuthorizationURLOpener()
 			{

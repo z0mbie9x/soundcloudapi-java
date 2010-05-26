@@ -25,6 +25,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.message.BasicNameValuePair;
 import org.urbanstew.soundcloudapi.ProgressFileBody;
@@ -69,20 +70,21 @@ public class RequestTest extends TestCase
 		response = mApi.get("users", params);
 		assertEquals(200, response.getStatusLine().getStatusCode());
 	}
-
-	public final void testUploadFile() throws Exception
+	
+	public final void testUrlGetMe() throws Exception
 	{
-		File file = new File("empty.wav");
-		assertTrue(file.exists());
+		HttpResponse response = mApi.get(
+			SoundCloudApiTest.sSoundCloudOptions.system == SoundCloudAPI.SoundCloudSystem.SANDBOX ?
+				"http://api.sandbox-soundcloud.com/me"
+				: "http://api.soundcloud.com/me");
 		
-		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
-		params.add(new BasicNameValuePair("track[title]", "This is a test upload"));
-		params.add(new BasicNameValuePair("track[sharing]", "private"));
+		assertEquals(200, response.getStatusLine().getStatusCode());
+	}
 
-		HttpResponse response = mApi.upload(file, params);
-		assertEquals(201, response.getStatusLine().getStatusCode());
-		
-		sCreatedTrack1Id = getId(response);
+	public final void testAbsoluteUrlGetMe() throws Exception
+	{
+		HttpResponse response = mApi.get("/me");
+		assertEquals(200, response.getStatusLine().getStatusCode());
 	}
 
 	public final void testGetMyTracks() throws Exception
@@ -91,16 +93,31 @@ public class RequestTest extends TestCase
 		assertEquals(200, response.getStatusLine().getStatusCode());
 		
 		sTrackId = getId(response);
+
+		response = mApi.get("me/tracks");
+		assertEquals(200, response.getStatusLine().getStatusCode());
+		
+		sStreamUrl = getStreamUrl(response);
 	}
 	
+	public final void testGetStream() throws Exception
+	{
+		HttpResponse response = mApi.getStream(sStreamUrl);
+		assertEquals(200, response.getStatusLine().getStatusCode());
+	}
+
 	public final void testPostComment() throws Exception
 	{
 		assertTrue(sTrackId >= 0);
-		
+
 		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
 		params.add(new BasicNameValuePair("comment[body]", "This is a test comment"));
-				
-		HttpResponse response = mApi.post("tracks/" + sTrackId + "/comments", params);
+
+		String commentUrl = "tracks/" + sTrackId + "/comments";
+		System.out.println("-");
+		HttpResponse response = mApi.post(commentUrl, params);
+		System.out.println("-");
+		SoundCloudApiTest.printXML("Response", response);
 		assertEquals(201, response.getStatusLine().getStatusCode());
 
 		sCommentId = getId(response);
@@ -112,10 +129,41 @@ public class RequestTest extends TestCase
 		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
 	
+	public final void testPostDeleteCommentXML() throws Exception
+	{
+		assertTrue(sTrackId >= 0);
+
+		String commentUrl = "tracks/" + sTrackId + "/comments";
+
+		StringEntity entity = new StringEntity("<comment><body>This is a test XML comment</body></comment>");
+		entity.setContentType("application/xml");
+
+		HttpResponse response = mApi.post(commentUrl, entity);
+		assertEquals(201, response.getStatusLine().getStatusCode());
+
+		response = mApi.delete("comments/" + getId(response));
+		assertEquals(200, response.getStatusLine().getStatusCode());		
+	}
+	
 	public final void testPutTrackFavorite() throws Exception
 	{
 		HttpResponse response = mApi.put("me/favorites/" + sCreatedTrack1Id);
+		assertEquals(2, response.getStatusLine().getStatusCode() / 100);
+	}
+	
+	public final void testUploadFile() throws Exception
+	{
+		File file = new File("empty.wav");
+		assertTrue(file.exists());
+		
+		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("track[title]", "This is a test upload from empty.wav"));
+		params.add(new BasicNameValuePair("track[sharing]", "private"));
+
+		HttpResponse response = mApi.upload(file, params);
 		assertEquals(201, response.getStatusLine().getStatusCode());
+		
+		sCreatedTrack1Id = getId(response);
 	}
 
 	public final void testUploadFileFromByteArray() throws Exception
@@ -163,12 +211,15 @@ public class RequestTest extends TestCase
 		
 		progressThread.start();
 		while(progressThread.isAlive())
-			System.out.println(fileBody.getBytesTransferred());
+		{
+			Thread.sleep(100);
+//			System.out.println(fileBody.getBytesTransferred());
+		}
 
-		assertEquals(132, fileBody.getBytesTransferred());
+		assertEquals(73772, fileBody.getBytesTransferred());
 	}
 	
-/*	public final void testFile1Delete() throws Exception
+	public final void testFile1Delete() throws Exception
 	{
 		assertTrue(sCreatedTrack1Id > 0);
 
@@ -186,11 +237,11 @@ public class RequestTest extends TestCase
 
 	public final void testFile3Delete() throws Exception
 	{
-		assertTrue(sCreatedTrack2Id > 0);
+		assertTrue(sCreatedTrack3Id > 0);
 
 		HttpResponse response = mApi.delete("tracks/" + sCreatedTrack3Id);
 		assertEquals(200, response.getStatusLine().getStatusCode());		
-	}*/
+	}
 	
 	public static Test suite()
 	{
@@ -206,6 +257,15 @@ public class RequestTest extends TestCase
 		return Integer.parseInt(dom.getElementsByTagName("id").item(0).getFirstChild().getNodeValue());
 	}
 	
+	private String getStreamUrl(HttpResponse response) throws Exception
+	{
+		DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		Document dom = db.parse(response.getEntity().getContent());
+
+		return dom.getElementsByTagName("stream-url").item(0).getFirstChild().getNodeValue();
+	}
+	
 	SoundCloudAPI mApi;
 	static int sUserId = -1, sTrackId = -1, sCommentId = -1, sCreatedTrack1Id = -1, sCreatedTrack2Id = -1, sCreatedTrack3Id = -1;
+	static String sStreamUrl = null;
 }

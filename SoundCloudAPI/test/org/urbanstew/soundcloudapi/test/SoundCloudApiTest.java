@@ -27,6 +27,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.http.HttpResponse;
 import org.urbanstew.soundcloudapi.SoundCloudAPI;
+import org.urbanstew.soundcloudapi.SoundCloudOptions;
 import org.w3c.dom.Document;
 
 public class SoundCloudApiTest
@@ -36,10 +37,23 @@ public class SoundCloudApiTest
 	public static SoundCloudAPI newSoundCloudAPI()
 	{
 		SoundCloudAPI api;
-		if(sToken == null || sTokenSecret == null)
-			api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", SoundCloudAPI.USE_SANDBOX);
+		String consumerKey, consumerSecret;
+		
+		if(sSoundCloudOptions.system == SoundCloudAPI.SoundCloudSystem.SANDBOX)
+		{
+			consumerKey = "t8cMJ2NjFbxt7wXVBpxA";
+			consumerSecret = "Ukn3vTNTFByd6TWpfco4XkKi4eRFyKnLDsxay83t8";
+		}
 		else
-			api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", sToken, sTokenSecret, SoundCloudAPI.USE_SANDBOX);
+		{
+			consumerKey = "HXPgy7JJG5DLCMkyqBvksA";
+			consumerSecret = "mXvEvhHstPLTqG8wtrfD6G4ZSZDhDrRkYzN8AREuA";			
+		}
+		
+		if(sToken == null || sTokenSecret == null)
+			api = new SoundCloudAPI(consumerKey, consumerSecret, sSoundCloudOptions);
+		else
+			api = new SoundCloudAPI(consumerKey, consumerSecret, sToken, sTokenSecret, sSoundCloudOptions);
 		return api;
 	}
 	
@@ -55,11 +69,17 @@ public class SoundCloudApiTest
 	    System.out.println(writer.toString());
 	}
 
+	public static SoundCloudOptions sSoundCloudOptions =
+//		SoundCloudAPI.USE_SANDBOX;
+		SoundCloudAPI.USE_PRODUCTION;
+	
 	public static String
-		sToken = null, sTokenSecret = null;
+//		sToken = null, sTokenSecret = null;
 
 	// to avoid having to re-authorize, you can hard-code the token / token secret here:
 	// (this will also disable the AuthorizationTest)
 //		sToken = "...",
 //		sTokenSecret= "...";
+	sToken = "ZB4G8jA8Tsol2j7ge2yjIA",
+	sTokenSecret = "O4L0ITG9JLb8kV6EwlZcDMyFHifkkFZKMxQKDFZxOI";
 }
