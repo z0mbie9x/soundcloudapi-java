@@ -70,16 +70,14 @@ public class SoundCloudApiTest
 	}
 
 	public static SoundCloudOptions sSoundCloudOptions =
-//		SoundCloudAPI.USE_SANDBOX;
-		SoundCloudAPI.USE_PRODUCTION;
+		SoundCloudAPI.USE_SANDBOX;
+//		SoundCloudAPI.USE_PRODUCTION;
 	
 	public static String
-//		sToken = null, sTokenSecret = null;
+		sToken = null, sTokenSecret = null;
 
 	// to avoid having to re-authorize, you can hard-code the token / token secret here:
 	// (this will also disable the AuthorizationTest)
 //		sToken = "...",
 //		sTokenSecret= "...";
-	sToken = "ZB4G8jA8Tsol2j7ge2yjIA",
-	sTokenSecret = "O4L0ITG9JLb8kV6EwlZcDMyFHifkkFZKMxQKDFZxOI";
 }
