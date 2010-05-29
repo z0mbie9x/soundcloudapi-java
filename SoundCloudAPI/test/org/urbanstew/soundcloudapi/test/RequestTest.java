@@ -114,10 +114,7 @@ public class RequestTest extends TestCase
 		params.add(new BasicNameValuePair("comment[body]", "This is a test comment"));
 
 		String commentUrl = "tracks/" + sTrackId + "/comments";
-		System.out.println("-");
 		HttpResponse response = mApi.post(commentUrl, params);
-		System.out.println("-");
-		SoundCloudApiTest.printXML("Response", response);
 		assertEquals(201, response.getStatusLine().getStatusCode());
 
 		sCommentId = getId(response);
@@ -145,6 +142,24 @@ public class RequestTest extends TestCase
 		assertEquals(200, response.getStatusLine().getStatusCode());		
 	}
 	
+	public final void testPutMeWebsite() throws Exception
+	{
+		List<NameValuePair> params = new java.util.ArrayList<NameValuePair>();
+		params.add(new BasicNameValuePair("user[website]", "http://website.example.com"));
+
+		HttpResponse response = mApi.put("/me", params);
+		assertEquals(200, response.getStatusLine().getStatusCode());
+	}
+	
+	public final void testPutMeWebsiteXML() throws Exception
+	{
+		StringEntity entity = new StringEntity("<user><website>http://website.example.com</website></user>");
+		entity.setContentType("application/xml");
+
+		HttpResponse response = mApi.put("/me", entity);
+		assertEquals(200, response.getStatusLine().getStatusCode());
+	}
+
 	public final void testPutTrackFavorite() throws Exception
 	{
 		HttpResponse response = mApi.put("me/favorites/" + sCreatedTrack1Id);
