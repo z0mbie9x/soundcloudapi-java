@@ -407,7 +407,7 @@ public class SoundCloudAPI
      */
 	public HttpResponse get(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-		return performRequest(new HttpGet(urlEncode(resource, params)));
+		return httpClient.execute(getRequest(resource, params));
 	}
 
     /**
@@ -421,7 +421,7 @@ public class SoundCloudAPI
 		return signRequest(new HttpGet(urlEncode(resource, params)));
 	}
 	
-    /**
+	/**
      * Performs a PUT request on a specified resource.
      * @throws OAuthExpectationFailedException 
      * @throws OAuthMessageSignerException 
@@ -431,7 +431,7 @@ public class SoundCloudAPI
      */
 	public HttpResponse put(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-		return put(resource, null);
+		return put(resource, (List<NameValuePair>) null);
 	}
 
     /**
@@ -444,7 +444,7 @@ public class SoundCloudAPI
      */
 	public HttpResponse put(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-        return performRequest(new HttpPut(urlEncode(resource, params)));   
+        return httpClient.execute(putRequest(resource, params));   
 	}
 
     /**
@@ -457,7 +457,36 @@ public class SoundCloudAPI
 	{
 		return signRequest(new HttpPut(urlEncode(resource, params)));
 	}
-	
+
+    /**
+     * Performs a PUT request on a specified resource, with an entity.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpResponse put(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
+	{
+        return httpClient.execute(putRequest(resource, entity));
+	}
+
+    /**
+     * Prepares a PUT request on a specified resource, with an entity.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws OAuthCommunicationException 
+     * @throws UnsupportedEncodingException 
+     */
+	public HttpUriRequest putRequest(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, UnsupportedEncodingException
+	{
+		HttpPut put = new HttpPut(urlEncode(resource, null));
+
+		put.setEntity(entity);
+
+		return signRequest(put);
+	}
+
     /**
      * Performs a POST request on a specified resource.
      * @throws OAuthExpectationFailedException 
@@ -485,19 +514,6 @@ public class SoundCloudAPI
 	}
 
     /**
-     * Performs a POST request on a specified resource, with parameters.
-     * @throws OAuthExpectationFailedException 
-     * @throws OAuthMessageSignerException 
-     * @throws IOException 
-     * @throws ClientProtocolException 
-     * @throws OAuthCommunicationException 
-     */
-	public HttpResponse post(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
-	{
-        return httpClient.execute(postRequest(resource, entity));
-	}
-	
-    /**
      * Prepares a POST request on a specified resource, with parameters.
      * @throws OAuthExpectationFailedException 
      * @throws OAuthMessageSignerException 
@@ -507,6 +523,19 @@ public class SoundCloudAPI
 	public HttpUriRequest postRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, UnsupportedEncodingException
 	{
 		return signRequest(new HttpPost(urlEncode(resource, params)));
+	}
+	
+    /**
+     * Performs a POST request on a specified resource, with an entity.
+     * @throws OAuthExpectationFailedException 
+     * @throws OAuthMessageSignerException 
+     * @throws IOException 
+     * @throws ClientProtocolException 
+     * @throws OAuthCommunicationException 
+     */
+	public HttpResponse post(String resource, HttpEntity entity) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
+	{
+        return httpClient.execute(postRequest(resource, entity));
 	}
 	
     /**
@@ -548,7 +577,7 @@ public class SoundCloudAPI
      */
 	public HttpResponse delete(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-        return performRequest(new HttpDelete(urlEncode(resource, params)));   
+        return httpClient.execute(deleteRequest(resource, params));   
 	}
 	
     /**
