@@ -1,0 +1,15 @@
+#!/bin/bash
+# this script simply sets the JAVA_HOME
+# before calling ant so that ant builds
+# in a java 1.6 environment.
+#
+# It is neither necessary nor suffucifient
+# to set Java 1.6 in your Java preferences.
+#
+# These kinds of steps should not be necessary
+# on other OSes.
+#
+#  Bjorn Roche
+
+export JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home/
+ant

@@ -1,0 +1,45 @@
+<project name="SoundCloudAPI" basedir="." default="jar">
+    <property name="src.dir"     value="src"/>
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
+
+    <!-- path for all jars -->
+    <path id="jars.list">
+      <fileset dir="lib/">
+        <include name="*.jar"/>
+      </fileset>
+    </path>
+    <property name="jars" refid="jars.list" />
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="compile">
+        <echo>${ant.java.version}</echo>
+        <mkdir dir="${classes.dir}"/>
+        <javac target="1.5" srcdir="${src.dir}" destdir="${classes.dir}" >
+           <classpath>
+              <pathelement path="${jars}" />
+           </classpath>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <!-- <attribute name="Main-Class" value="${main-class}"/> -->
+            </manifest>
+        </jar>
+    </target>
+
+<!--
+    <target name="run" depends="jar">
+        <java jar="${jar.dir}/${ant.project.name}.jar" fork="true"/>
+    </target>
+-->
+
+    <target name="clean-build" depends="clean,jar"/>
+</project>
