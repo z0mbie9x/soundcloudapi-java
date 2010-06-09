@@ -41,8 +41,8 @@ public class SoundCloudApiTest
 		
 		if(sSoundCloudOptions.system == SoundCloudAPI.SoundCloudSystem.SANDBOX)
 		{
-			consumerKey = "t8cMJ2NjFbxt7wXVBpxA";
-			consumerSecret = "Ukn3vTNTFByd6TWpfco4XkKi4eRFyKnLDsxay83t8";
+			consumerKey = "eRxc2hzctTJzalJvG27A";
+			consumerSecret = "KA7s7pfk8ZFRRXnhIhMWGh7tEprxdzlD7I1Q5cYD4";
 		}
 		else
 		{

@@ -57,7 +57,7 @@ public class FullExample extends TestCase
 		String verificationCode = in.readLine();
 		
 		// swap the request token for the access token
-		//api.obtainAccessToken(verificationCode);
+		api.obtainAccessToken(verificationCode);
 		
 		// save the access token and secret for future use
 		mAccessToken = api.getToken();

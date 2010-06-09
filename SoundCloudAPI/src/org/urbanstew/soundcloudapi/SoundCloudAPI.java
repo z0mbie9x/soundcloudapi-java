@@ -455,7 +455,12 @@ public class SoundCloudAPI
      */
 	public HttpUriRequest putRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		return signRequest(new HttpPut(urlEncode(resource, params)));
+		HttpPut put = new HttpPut(urlEncode(resource, params));
+		
+		// fix contributed by Bjorn Roche
+		put.getParams().setBooleanParameter( "http.protocol.expect-continue", false );
+
+		return signRequest(put);
 	}
 
     /**
@@ -483,6 +488,8 @@ public class SoundCloudAPI
 		HttpPut put = new HttpPut(urlEncode(resource, null));
 
 		put.setEntity(entity);
+		// fix contributed by Bjorn Roche
+		put.getParams().setBooleanParameter( "http.protocol.expect-continue", false );
 
 		return signRequest(put);
 	}
@@ -522,7 +529,12 @@ public class SoundCloudAPI
      */
 	public HttpUriRequest postRequest(String resource, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, UnsupportedEncodingException
 	{
-		return signRequest(new HttpPost(urlEncode(resource, params)));
+		HttpPost post = new HttpPost(urlEncode(resource, params));
+
+		// fix contributed by Bjorn Roche
+		post.getParams().setBooleanParameter( "http.protocol.expect-continue", false );
+		
+		return signRequest(post);
 	}
 	
     /**
@@ -550,7 +562,9 @@ public class SoundCloudAPI
 		HttpPost post = new HttpPost(urlEncode(resource, null));
 		
 		post.setEntity(entity);
-				
+		// fix contributed by Bjorn Roche
+		post.getParams().setBooleanParameter( "http.protocol.expect-continue", false );
+
 		return signRequest(post);
 	}
 
@@ -615,7 +629,9 @@ public class SoundCloudAPI
 	public HttpResponse upload(ContentBody fileBody, List<NameValuePair> params) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		HttpPost post = new HttpPost(urlEncode("tracks", null));  
-		 
+		// fix contributed by Bjorn Roche
+		post.getParams().setBooleanParameter( "http.protocol.expect-continue", false );
+
 		MultipartEntity entity = new MultipartEntity();
 		for(NameValuePair pair : params)
 		{
