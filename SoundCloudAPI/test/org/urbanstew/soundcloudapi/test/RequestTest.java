@@ -105,6 +105,12 @@ public class RequestTest extends TestCase
 		HttpResponse response = mApi.getStream(sStreamUrl);
 		assertEquals(200, response.getStatusLine().getStatusCode());
 	}
+	
+	public final void testGetStreamRedirect() throws Exception
+	{
+		String redirectedUrl = mApi.getRedirectedStreamUrl(sStreamUrl);
+		assertTrue(redirectedUrl.startsWith("http://ak-media"));
+	}
 
 	public final void testPostComment() throws Exception
 	{

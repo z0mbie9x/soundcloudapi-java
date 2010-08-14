@@ -29,6 +29,7 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.List;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -651,6 +652,34 @@ public class SoundCloudAPI
 	public String signStreamUrl(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
 		return getConsumer().sign(resource);
+	}
+	
+	public HttpResponse getStreamRedirect(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, IOException
+	{
+		String signedResource = signStreamUrl(resource);
+		HttpGet get = new HttpGet(signedResource);
+		get.getParams().setBooleanParameter("http.protocol.handle-redirects",false);
+		return httpClient.execute(get);
+	}
+
+	public String parseRedirectResponse(HttpResponse response)
+	{
+		if(response.getStatusLine().getStatusCode() / 100 != 3)
+			return null;
+		else
+		{
+			for(Header header : response.getHeaders("Location"))
+				return header.getValue();
+			return null;
+		}
+	}
+	public String getRedirectedStreamUrl(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, IOException
+	{
+		String signedResource = signStreamUrl(resource);
+		HttpGet get = new HttpGet(signedResource);
+		get.getParams().setBooleanParameter("http.protocol.handle-redirects",false);
+		String redirect = parseRedirectResponse(httpClient.execute(get));
+		return (redirect != null) ? redirect : signedResource;
 	}
 
 	public HttpResponse getStream(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
