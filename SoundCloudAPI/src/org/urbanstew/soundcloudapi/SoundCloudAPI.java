@@ -649,19 +649,39 @@ public class SoundCloudAPI
 		return performRequest(post);  
 	}
 	
-	public String signStreamUrl(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
+	/**
+     * Signs the provided URL.  Useful for stream URLs which you might need to access
+     * using e.g., an audio player which won't do the signing for you. 
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws OAuthCommunicationException 
+     */
+	public String signStreamUrl(String url) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		return getConsumer().sign(resource);
+		return getConsumer().sign(url);
 	}
 	
-	public HttpResponse getStreamRedirect(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, IOException
+	/**
+     * Executes a GET request for the given URL, without following any redirects.
+     * Useful for stream URLs which return a redirect.
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws OAuthCommunicationException
+	 * @throws ClientProtocolException
+	 * @throws IOException
+     */
+	public HttpResponse getStreamRedirect(String url) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, IOException
 	{
-		String signedResource = signStreamUrl(resource);
+		String signedResource = signStreamUrl(url);
 		HttpGet get = new HttpGet(signedResource);
 		get.getParams().setBooleanParameter("http.protocol.handle-redirects",false);
 		return httpClient.execute(get);
 	}
 
+	/**
+     * Utility function that returns the value of the Location header in a redirect
+     * response.
+     */
 	public String parseRedirectResponse(HttpResponse response)
 	{
 		if(response.getStatusLine().getStatusCode() / 100 != 3)
@@ -673,13 +693,23 @@ public class SoundCloudAPI
 			return null;
 		}
 	}
+	
+	/**
+     * Returns a URL you can use to access a stream resource without any further need for signing.
+     * If the GET request on the stream URL results in a redirect, this is equivalent to
+     * parseRedirectResoinse(getStreamRedirect(resource).  If not, it is equivalent to
+     * signStreamUrl(resource).
+     * 
+	 * @throws OAuthExpectationFailedException 
+	 * @throws OAuthMessageSignerException 
+	 * @throws OAuthCommunicationException
+	 * @throws ClientProtocolException
+	 * @throws IOException
+     */
 	public String getRedirectedStreamUrl(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException, ClientProtocolException, IOException
 	{
-		String signedResource = signStreamUrl(resource);
-		HttpGet get = new HttpGet(signedResource);
-		get.getParams().setBooleanParameter("http.protocol.handle-redirects",false);
-		String redirect = parseRedirectResponse(httpClient.execute(get));
-		return (redirect != null) ? redirect : signedResource;
+		String redirect = parseRedirectResponse(getStreamRedirect(resource));
+		return (redirect != null) ? redirect : signStreamUrl(resource);
 	}
 
 	public HttpResponse getStream(String resource) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
