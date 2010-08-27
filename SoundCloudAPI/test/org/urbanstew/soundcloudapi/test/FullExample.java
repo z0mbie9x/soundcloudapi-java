@@ -42,7 +42,7 @@ public class FullExample extends TestCase
 		// (these are valid for the sandbox only
 		//   - to use your consumer key/secret on the production SoundCloud site,
 		//     omit the SoundCloudAPI.USE_SANDBOX parameter) 
-		SoundCloudAPI api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", SoundCloudAPI.USE_SANDBOX);
+		SoundCloudAPI api = new SoundCloudAPI("t8cMJ2NjFbxt7wXVBpxA", "Ukn3vTNTFByd6TWpfco4XkKi4eRFyKnLDsxay83t8", SoundCloudAPI.USE_SANDBOX);
 		
 		// obtain the request token
 		String authorizationUrl = api.obtainRequestToken();
@@ -76,7 +76,7 @@ public class FullExample extends TestCase
 		// (the consumer key and secret are valid for the sandbox only
 		//   - to use your consumer key/secret on the production SoundCloud site,
 		//     omit the SoundCloudAPI.USE_SANDBOX parameter) 
-		SoundCloudAPI api = new SoundCloudAPI("x5vOJhXYQk5diUTsTa5FA", "QEKE7XfdwUdNl9qiqAx3xHZhtS6iPjT3NnBj6sx8", mAccessToken, mAccessTokenSecret, SoundCloudAPI.USE_SANDBOX);
+		SoundCloudAPI api = new SoundCloudAPI("t8cMJ2NjFbxt7wXVBpxA", "Ukn3vTNTFByd6TWpfco4XkKi4eRFyKnLDsxay83t8", mAccessToken, mAccessTokenSecret, SoundCloudAPI.USE_SANDBOX);
 		
 		// send a request
 		HttpResponse response = api.put("me/favorites/996705");
