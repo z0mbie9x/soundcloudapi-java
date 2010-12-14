@@ -838,7 +838,7 @@ public class SoundCloudAPI
 	 * @throws ClientProtocolException 
 	 * @throws OAuthCommunicationException 
      */
-	private HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
+	public HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
 		signRequest(request);
         return httpClient.execute(request);
