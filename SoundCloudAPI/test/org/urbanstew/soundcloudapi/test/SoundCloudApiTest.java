@@ -28,6 +28,7 @@ import javax.xml.transform.stream.StreamResult;
 import org.apache.http.HttpResponse;
 import org.urbanstew.soundcloudapi.SoundCloudAPI;
 import org.urbanstew.soundcloudapi.SoundCloudOptions;
+import org.urbanstew.soundcloudapi.SoundCloudAPI.OAuthVersion;
 import org.w3c.dom.Document;
 
 public class SoundCloudApiTest
@@ -70,8 +71,10 @@ public class SoundCloudApiTest
 	}
 
 	public static SoundCloudOptions sSoundCloudOptions =
-		SoundCloudAPI.USE_SANDBOX;
-//		SoundCloudAPI.USE_PRODUCTION;
+		SoundCloudAPI.USE_SANDBOX
+//		SoundCloudAPI.USE_PRODUCTION
+//		;
+		.with(OAuthVersion.V2_0);
 	
 	public static String
 		sToken = null, sTokenSecret = null;

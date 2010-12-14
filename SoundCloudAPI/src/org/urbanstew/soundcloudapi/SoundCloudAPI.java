@@ -27,6 +27,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.http.Header;
@@ -34,6 +35,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -41,6 +43,7 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.message.BasicNameValuePair;
 
 import oauth.signpost.OAuth;
 import oauth.signpost.OAuthConsumer;
@@ -59,13 +62,16 @@ import org.apache.http.entity.mime.content.ContentBody;
 import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.NameValuePair;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class SoundCloudAPI
 {
 	public enum OAuthVersion
 	{
 		V1_0,
-		V1_0_A
+		V1_0_A,
+		V2_0
 	}
 	
 	public enum SoundCloudSystem
@@ -166,19 +172,21 @@ public class SoundCloudAPI
         		new ThreadSafeClientConnManager(client.getParams(), client.getConnectionManager().getSchemeRegistry()),
         		client.getParams()
         	);
+                
     }
 	
 	private void setUsingSandbox(boolean use)
 	{
+		String protocol = mOptions.version == OAuthVersion.V2_0 ? "https://" : "http://";
 		if(!use)
 		{
-			mSoundCloudURL = "http://soundcloud.com/";
-			mSoundCloudApiURL = "http://api.soundcloud.com/";
+			mSoundCloudURL = protocol + "soundcloud.com/";
+			mSoundCloudApiURL = protocol + "api.soundcloud.com/";
 		}
 		else
 		{
-			mSoundCloudURL = "http://sandbox-soundcloud.com/";
-			mSoundCloudApiURL = "http://api.sandbox-soundcloud.com/";
+			mSoundCloudURL = protocol + "sandbox-soundcloud.com/";
+			mSoundCloudApiURL = protocol + "api.sandbox-soundcloud.com/";
 		}
 		
 	    mProvider = new DefaultOAuthProvider
@@ -385,6 +393,93 @@ public class SoundCloudAPI
 		mState = State.AUTHORIZED;
 	}
 	
+	/**
+     * Obtains an OAuth 2.0 access token using username/password credentials.
+	 * @throws IOException
+	 * @throws ClientProtocolException
+     */
+	public void obtainAccessToken(String username, String password) throws ClientProtocolException, IOException
+	{
+		List<NameValuePair> params = new ArrayList<NameValuePair>();
+		  
+	    params.add(new BasicNameValuePair("grant_type", "password"));
+	    params.add(new BasicNameValuePair("username", username));
+	    params.add(new BasicNameValuePair("password", password));
+
+	    obtainAccessToken(params);
+	}
+	
+	/**
+     * Refreshes an OAuth 2.0 access token using the refresh token.
+	 * @throws IOException 
+	 * @throws ClientProtocolException 
+	 * @throws OAuthCommunicationException 
+     */
+	public void refreshAccessToken() throws ClientProtocolException, IOException 
+	{		
+		List<NameValuePair> params = new ArrayList<NameValuePair>();
+		  
+	    params.add(new BasicNameValuePair("grant_type", "refresh_token"));
+	    params.add(new BasicNameValuePair("refresh_token", this.getTokenSecret()));
+	    
+	    obtainAccessToken(params);
+	}
+	
+	private void obtainAccessToken(List<NameValuePair> params) throws ClientProtocolException, IOException
+	{
+		if(mOptions.version != SoundCloudAPI.OAuthVersion.V2_0)
+			throw new RuntimeException("username/password authorization is only supported for OAuth 2.0");
+		
+		HttpPost post = new HttpPost(urlEncode("oauth2/token", null));
+
+	    params.add(new BasicNameValuePair("client_id", getConsumer().getConsumerKey()));
+	    params.add(new BasicNameValuePair("client_secret", getConsumer().getConsumerSecret()));
+		
+		try
+		{
+			post.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+		} catch (UnsupportedEncodingException e)
+		{
+		}
+	    
+		HttpResponse response = httpClient.execute(post);
+		
+        BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()));
+        StringBuilder entityString = new StringBuilder();
+
+        try
+        {
+            String line;
+            while ((line = reader.readLine()) != null)
+            	entityString.append(line + "\n");
+        } catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        
+        JSONObject json = null;
+        try
+		{
+			json=new JSONObject(entityString.toString());
+
+			if(json.has("access_token") && json.has("refresh_token"))
+			{
+				getConsumer().setTokenWithSecret
+				(
+					json.getString("access_token"),
+					json.getString("refresh_token")
+				);
+
+				mState = State.AUTHORIZED;
+			}
+		} catch (JSONException e)
+		{
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	
+	}
+	
     /**
      * Performs a GET request on a specified resource.
      * @throws OAuthExpectationFailedException 
@@ -410,7 +505,7 @@ public class SoundCloudAPI
 	{
 		return httpClient.execute(getRequest(resource, params));
 	}
-
+	
     /**
      * Prepares a GET request on a specified resource, with parameters.
      * @throws OAuthExpectationFailedException 
@@ -658,7 +753,10 @@ public class SoundCloudAPI
      */
 	public String signStreamUrl(String url) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException
 	{
-		return getConsumer().sign(url);
+		if(mOptions.version == OAuthVersion.V2_0 && mState == State.AUTHORIZED)
+			return url + (url.contains("?") ? "&" : "?") + "oauth_token=" + getToken();
+		else
+			return getConsumer().sign(url);
 	}
 	
 	/**
@@ -725,7 +823,10 @@ public class SoundCloudAPI
      */
 	private HttpUriRequest signRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, OAuthCommunicationException 
 	{
-		getConsumer().sign(request);
+		if(mOptions.version == OAuthVersion.V2_0 && mState == State.AUTHORIZED)
+			request.addHeader("Authorization", "OAuth " + getToken());
+		else
+			getConsumer().sign(request);
 		return request;
 	}
 	
@@ -739,7 +840,7 @@ public class SoundCloudAPI
      */
 	private HttpResponse performRequest(HttpUriRequest request) throws OAuthMessageSignerException, OAuthExpectationFailedException, ClientProtocolException, IOException, OAuthCommunicationException
 	{
-		getConsumer().sign(request);
+		signRequest(request);
         return httpClient.execute(request);
 	}
 	
@@ -833,8 +934,8 @@ public class SoundCloudAPI
 
 	SoundCloudOptions mOptions;
 	
-    HttpClient httpClient;
-    
+	DefaultHttpClient httpClient;
+        
     class InheritableOAuthConsumer extends InheritableThreadLocal<OAuthConsumer>
     {
     	protected OAuthConsumer childValue(OAuthConsumer parentValue)
@@ -870,3 +971,5 @@ class StringBodyNoHeaders extends StringBody
 		return null;
 	}	
 }
+
+

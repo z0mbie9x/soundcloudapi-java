@@ -50,6 +50,9 @@ public class AuthorizationTest extends TestCase
 
 	public final void testAutomaticAuthorization() throws Exception
 	{
+		if(SoundCloudApiTest.sSoundCloudOptions.version == SoundCloudAPI.OAuthVersion.V2_0)
+			return;
+
 		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
 			return;
 
@@ -91,6 +94,9 @@ public class AuthorizationTest extends TestCase
 
 	public final void testAuthorization() throws Exception
 	{
+		if(SoundCloudApiTest.sSoundCloudOptions.version == SoundCloudAPI.OAuthVersion.V2_0)
+			return;
+
 		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
 			return;
 
@@ -115,6 +121,34 @@ public class AuthorizationTest extends TestCase
 		mApi.obtainAccessToken(verificationCode);
 		assertEquals(SoundCloudAPI.State.AUTHORIZED, mApi.getState());
 		
+		System.out.println("sToken = \"" + mApi.getToken() + "\",");
+		System.out.println("sTokenSecret = \"" + mApi.getTokenSecret() + "\";");
+		SoundCloudApiTest.sToken = mApi.getToken();
+		SoundCloudApiTest.sTokenSecret = mApi.getTokenSecret();
+	}
+	
+	public final void testAuthorizationOAuth2() throws Exception
+	{
+		if(SoundCloudApiTest.sSoundCloudOptions.version != SoundCloudAPI.OAuthVersion.V2_0)
+			return;
+
+		if(SoundCloudApiTest.sToken != null && SoundCloudApiTest.sTokenSecret != null)
+			return;
+		
+		InputStreamReader reader = new InputStreamReader(System.in);
+		BufferedReader in = new BufferedReader(reader);
+		
+		System.out.println("username:");
+		String username = in.readLine();
+		System.out.println("password:");
+		String password = in.readLine();
+		
+		mApi.obtainAccessToken(username, password);
+		
+		System.out.println("Access token: " + mApi.getToken());
+		assertNotNull(mApi.getToken());
+		assertEquals(SoundCloudAPI.State.AUTHORIZED, mApi.getState());
+
 		System.out.println("sToken = \"" + mApi.getToken() + "\",");
 		System.out.println("sTokenSecret = \"" + mApi.getTokenSecret() + "\";");
 		SoundCloudApiTest.sToken = mApi.getToken();

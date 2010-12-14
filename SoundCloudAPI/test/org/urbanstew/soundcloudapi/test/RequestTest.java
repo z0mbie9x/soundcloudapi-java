@@ -73,10 +73,11 @@ public class RequestTest extends TestCase
 	
 	public final void testUrlGetMe() throws Exception
 	{
-		HttpResponse response = mApi.get(
-			SoundCloudApiTest.sSoundCloudOptions.system == SoundCloudAPI.SoundCloudSystem.SANDBOX ?
-				"http://api.sandbox-soundcloud.com/me"
-				: "http://api.soundcloud.com/me");
+		String protocol = SoundCloudApiTest.sSoundCloudOptions.version == SoundCloudAPI.OAuthVersion.V2_0 ? "https" : "http";
+		HttpResponse response = mApi.get(protocol +
+			(SoundCloudApiTest.sSoundCloudOptions.system == SoundCloudAPI.SoundCloudSystem.SANDBOX ?
+				"://api.sandbox-soundcloud.com/me"
+				: "://api.soundcloud.com/me"));
 		
 		assertEquals(200, response.getStatusLine().getStatusCode());
 	}
@@ -109,7 +110,7 @@ public class RequestTest extends TestCase
 	public final void testGetStreamRedirect() throws Exception
 	{
 		String redirectedUrl = mApi.getRedirectedStreamUrl(sStreamUrl);
-		assertTrue(redirectedUrl.startsWith("http://ak-media"));
+		assertTrue(redirectedUrl.startsWith("http://ak-media") || redirectedUrl.startsWith("https://ak-media"));
 	}
 
 	public final void testPostComment() throws Exception
